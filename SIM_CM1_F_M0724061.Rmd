@@ -1,0 +1,953 @@
+---
+title: "Analisis Data Rental Film pada Database Sakila"
+author: "Jihan Iffah Nisrina"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: tango
+    code_folding: show
+    number_sections: true
+---
+
+<style>
+/* ===================== KUSTOMISASI CSS — PALET SAKILA ===================== */
+
+/* Palet Warna:
+   Crimson Depth  : #8C031C
+   Rose Flame     : #F24B6A
+   Olive Grove    : #718C49
+   Spiced Orange  : #F27405
+   Coral Blush    : #F26B6B
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap');
+
+/* ---- Reset & Base ---- */
+body {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.85;
+  color: #2c2c2c;
+  background-color: #fdf6f0;
+}
+
+/* ---- Headings ---- */
+h1, .title {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #8C031C;
+  font-weight: 700;
+  border-bottom: 3px solid #F24B6A;
+  padding-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+h2 {
+  color: #8C031C;
+  font-weight: 700;
+  border-left: 6px solid #F27405;
+  padding-left: 12px;
+  margin-top: 32px;
+  background: linear-gradient(90deg, #fff5ee 0%, transparent 100%);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-radius: 0 6px 6px 0;
+}
+
+h3 {
+  color: #718C49;
+  font-weight: 600;
+  border-left: 4px solid #718C49;
+  padding-left: 10px;
+}
+
+h4 {
+  color: #F27405;
+  font-weight: 600;
+}
+
+/* ---- Author/Date ---- */
+.author, .date {
+  color: #718C49;
+  font-style: italic;
+}
+
+/* ---- Code blocks ---- */
+
+/* Wrapper div yang dibuat knitr/rmarkdown */
+div.sourceCode,
+div.sourceCode pre,
+pre.sourceCode {
+  background-color: #1e1a18 !important;
+  border-left: 5px solid #F27405 !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  font-size: 13px !important;
+  color: #f8f0e8 !important;
+  box-shadow: 0 2px 8px rgba(140,3,28,0.12) !important;
+  margin: 10px 0 16px 0 !important;
+}
+
+pre {
+  background-color: #1e1a18 !important;
+  border-left: 5px solid #F27405 !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  font-size: 13px !important;
+  color: #f8f0e8 !important;
+  box-shadow: 0 2px 8px rgba(140,3,28,0.12) !important;
+}
+
+/* Inline code (bukan di dalam pre) */
+p code, li code, td code, h1 code, h2 code, h3 code {
+  color: #8C031C !important;
+  background-color: #fce8ec !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 92% !important;
+  font-weight: 600 !important;
+}
+
+/* Reset warna token di dalam pre */
+pre code,
+div.sourceCode pre code {
+  color: #f8f0e8 !important;
+  background: none !important;
+  padding: 0 !important;
+}
+
+/* Token syntax highlighting — override tango */
+code span.kw { color: #F24B6A !important; font-weight: bold !important; }
+code span.dt { color: #F27405 !important; }
+code span.dv { color: #9AB860 !important; }
+code span.bn { color: #9AB860 !important; }
+code span.fl { color: #9AB860 !important; }
+code span.ch { color: #F26B6B !important; }
+code span.st { color: #F26B6B !important; }
+code span.co { color: #8a8a7a !important; font-style: italic !important; }
+code span.ot { color: #F27405 !important; }
+code span.al { color: #F24B6A !important; font-weight: bold !important; }
+code span.fu { color: #c9a85c !important; }
+code span.er { color: #F24B6A !important; font-weight: bold !important; }
+code span.op { color: #e8d5b0 !important; }
+code span.bu { color: #c9a85c !important; }
+code span.va { color: #f8f0e8 !important; }
+code span.cn { color: #9AB860 !important; font-weight: bold !important; }
+code span.sc { color: #F26B6B !important; }
+code span.vs { color: #F26B6B !important; }
+code span.ss { color: #F26B6B !important; }
+code span.im { color: #F24B6A !important; }
+code span.in { color: #8a8a7a !important; font-style: italic !important; }
+code span.wa { color: #F27405 !important; font-style: italic !important; }
+code span.do { color: #8a8a7a !important; font-style: italic !important; }
+code span.an { color: #8a8a7a !important; font-style: italic !important; }
+code span.pp { color: #F24B6A !important; }
+
+/* ---- Tables ---- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 22px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(140,3,28,0.08);
+}
+
+th {
+  background: linear-gradient(135deg, #8C031C, #F24B6A);
+  color: white;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #f0ddd8;
+}
+
+tr:nth-child(even) {
+  background-color: #fdf0ec;
+}
+
+tr:hover {
+  background-color: #fce8ec;
+  transition: background 0.2s;
+}
+
+/* ---- TOC ---- */
+.tocify {
+  border: 1px solid #f0ddd8 !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.tocify-header .tocify-item {
+  font-size: 13.5px;
+  padding: 5px 14px;
+}
+
+.tocify .tocify-header .active {
+  background-color: #8C031C !important;
+  color: white !important;
+}
+
+/* ---- Kotak-kotak khusus ---- */
+.insight-box {
+  background: linear-gradient(135deg, #fff0f2, #fff8f0);
+  border-left: 6px solid #F24B6A;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  font-style: italic;
+  font-size: 15px;
+  box-shadow: 0 2px 10px rgba(242,75,106,0.10);
+}
+
+.interp-box {
+  background: linear-gradient(135deg, #f6fbf0, #fffff8);
+  border-left: 6px solid #718C49;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 10px rgba(113,140,73,0.10);
+}
+
+.narasi-box {
+  background: linear-gradient(135deg, #fff8f0, #fff5f5);
+  border: 1.5px solid #F27405;
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin: 20px 0;
+  line-height: 1.9;
+  font-size: 15px;
+  box-shadow: 0 2px 12px rgba(242,116,5,0.08);
+}
+
+.stat-card {
+  display: inline-block;
+  background: linear-gradient(140deg, #6B0115 0%, #8C031C 50%, #B5042A 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 16px 22px;
+  margin: 6px 8px 6px 0;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  min-width: 170px;
+  box-shadow: 0 6px 20px rgba(140,3,28,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.12);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.40);
+}
+
+.stat-card .stat-number {
+  font-size: 24px;
+  font-weight: 800;
+  display: block;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  color: #ffffff;
+}
+
+.stat-card.olive {
+  background: linear-gradient(140deg, #3D5E28 0%, #718C49 50%, #8BA35A 100%);
+  box-shadow: 0 6px 20px rgba(61,94,40,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.stat-card.orange {
+  background: linear-gradient(140deg, #B85800 0%, #F27405 50%, #F5904A 100%);
+  box-shadow: 0 6px 20px rgba(184,88,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.stat-card.rose {
+  background: linear-gradient(140deg, #B82248 0%, #F24B6A 50%, #F57090 100%);
+  box-shadow: 0 6px 20px rgba(184,34,72,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+/* ---- Section divider ---- */
+hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, #8C031C, #F24B6A, #F27405, #718C49, transparent);
+  margin: 32px 0;
+  border-radius: 4px;
+}
+
+/* ---- Badge ---- */
+.badge-red {
+  background-color: #8C031C;
+  color: white;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-olive {
+  background-color: #718C49;
+  color: white;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-orange {
+  background-color: #F27405;
+  color: white;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---- Scrollbar (Webkit) ---- */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #fdf6f0; }
+::-webkit-scrollbar-thumb { background: #F24B6A; border-radius: 8px; }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.width = 9,
+  fig.height = 5.5
+)
+```
+
+---
+
+# Pendahuluan
+
+## Latar Belakang
+
+Database **Sakila** merupakan database contoh (*sample database*) resmi dari MySQL yang mensimulasikan sistem manajemen penyewaan film (*video rental store*). Dataset ini mencakup informasi:
+
+- Data pelanggan (`customer`)
+- Transaksi rental (`rental`)
+- Pembayaran (`payment`)
+- Kategori film (`category`, `film_category`)
+- Inventori & stok (`inventory`)
+- Aktor & film (`actor`, `film`)
+
+## Insight yang Dianalisis
+
+<div class="insight-box">
+&#128269; <strong>Insight Utama:</strong> <em>"Kategori film apa yang menghasilkan pendapatan (revenue) tertinggi, dan bagaimana hubungan antara jumlah transaksi rental dengan total pendapatan per kategori?"</em>
+</div>
+
+Insight ini dipilih karena relevan untuk kepentingan bisnis rental film, antara lain:
+
+1. Mengidentifikasi **kategori film paling diminati** pelanggan.
+2. Memahami **kontribusi tiap kategori** terhadap total pendapatan.
+3. Menganalisis **pola perilaku pelanggan** dalam memilih kategori film.
+4. Menjadi dasar **strategi promosi dan pengelolaan stok** film.
+
+---
+
+# Persiapan
+
+## Import Library
+
+```{r library}
+library(DBI)       # Koneksi database
+library(odbc)      # Driver ODBC
+library(dplyr)     # Manipulasi data
+library(ggplot2)   # Visualisasi statis
+library(plotly)    # Visualisasi interaktif
+library(DT)        # Tabel interaktif
+library(scales)    # Format angka pada sumbu
+library(knitr)     # Render tabel kable
+library(kableExtra)# Styling tabel kable
+library(ggrepel)   # Label pada scatter plot
+library(tidyr)     # Reshape data
+library(forcats)   # Manipulasi factor
+```
+
+## Koneksi Database MySQL
+
+Koneksi ke database MySQL Sakila dilakukan menggunakan paket `DBI` dan `odbc`.  
+Pastikan **MySQL ODBC Driver** sudah terinstall dan database Sakila sudah diimport.
+
+```{r koneksi_mysql, include=FALSE}
+con <- DBI::dbConnect(
+  odbc::odbc(),
+  Driver   = "MySQL ODBC 8.0 ANSI Driver",
+  Server   = "127.0.0.1",
+  Database = "sakila",
+  UID      = "root",
+  PWD      = "Pojoendut123",   # Ganti dengan password MySQL Anda
+  Port     = 3306
+)
+```
+
+---
+
+# Pengambilan Data
+
+Data diambil dari enam tabel Sakila yang dihubungkan melalui relasi kunci asing (*foreign key*):
+
+| Tabel           | Peran dalam Query                              |
+|-----------------|------------------------------------------------|
+| `payment`       | Sumber data pembayaran / revenue               |
+| `rental`        | Sumber data transaksi rental                   |
+| `inventory`     | Penghubung antara rental dan film              |
+| `film`          | Data film                                      |
+| `film_category` | Tabel relasi film dengan kategori              |
+| `category`      | Nama kategori film                             |
+
+## Query SQL — Revenue per Kategori
+
+```{r query_kategori}
+query_kategori <- "
+SELECT
+    c.name            AS kategori,
+    COUNT(r.rental_id) AS total_rental,
+    SUM(p.amount)      AS total_revenue,
+    AVG(p.amount)      AS rata_pembayaran
+FROM payment p
+    JOIN rental        r  ON p.rental_id    = r.rental_id
+    JOIN inventory     i  ON r.inventory_id = i.inventory_id
+    JOIN film          f  ON i.film_id      = f.film_id
+    JOIN film_category fc ON f.film_id      = fc.film_id
+    JOIN category      c  ON fc.category_id = c.category_id
+GROUP BY c.name
+ORDER BY total_revenue DESC
+"
+
+df_kategori <- dbGetQuery(con, query_kategori) |>
+  mutate(
+    total_rental    = as.numeric(total_rental),
+    total_revenue   = as.numeric(total_revenue),
+    rata_pembayaran = as.numeric(rata_pembayaran)
+  )
+```
+
+## Query SQL — Top 10 Film dengan Revenue Tertinggi
+
+```{r query_top_film}
+query_top_film <- "
+SELECT
+    f.title,
+    c.name             AS kategori,
+    COUNT(r.rental_id) AS total_rental,
+    SUM(p.amount)      AS total_revenue
+FROM payment p
+    JOIN rental        r  ON p.rental_id    = r.rental_id
+    JOIN inventory     i  ON r.inventory_id = i.inventory_id
+    JOIN film          f  ON i.film_id      = f.film_id
+    JOIN film_category fc ON f.film_id      = fc.film_id
+    JOIN category      c  ON fc.category_id = c.category_id
+GROUP BY f.title, c.name
+ORDER BY total_revenue DESC
+LIMIT 10
+"
+
+df_top_film <- dbGetQuery(con, query_top_film) |>
+  mutate(
+    total_rental  = as.numeric(total_rental),
+    total_revenue = as.numeric(total_revenue)
+  )
+```
+
+---
+
+# Deskripsi Data
+
+## Ringkasan Statistik 
+
+```{r ringkasan_kartu, echo=TRUE, results='asis'}
+n_kat      <- nrow(df_kategori)
+total_rent <- sum(df_kategori$total_rental)
+total_rev  <- sum(df_kategori$total_revenue)
+top_kat    <- df_kategori$kategori[1]
+
+htmltools::tagList(
+  htmltools::div(
+    style = "display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 26px 0;",
+
+    htmltools::div(class = "stat-card",
+      "\U0001F3AC Jumlah Kategori",
+      htmltools::tags$span(class = "stat-number", n_kat)
+    ),
+
+    htmltools::div(class = "stat-card olive",
+      "\U0001F4CB Total Transaksi Rental",
+      htmltools::tags$span(class = "stat-number",
+                           format(total_rent, big.mark = ","))
+    ),
+
+    htmltools::div(class = "stat-card orange",
+      "\U0001F4B0 Total Revenue",
+      htmltools::tags$span(class = "stat-number",
+                           dollar(round(total_rev, 0)))
+    ),
+
+    htmltools::div(class = "stat-card rose",
+      "\U0001F3C6 Kategori Teratas",
+      htmltools::tags$span(class = "stat-number",
+                           style = "font-size:17px;", top_kat)
+    )
+  )
+)
+```
+
+## Penjelasan Deskripsi Data
+
+<div class="narasi-box">
+
+Dataset yang digunakan dalam analisis ini bersumber dari **database Sakila**, sebuah database simulasi bisnis video rental yang dikembangkan oleh MySQL. Data mencakup seluruh transaksi penyewaan film yang tercatat, mulai dari identifikasi pelanggan, judul film yang disewa, kategori genre film, hingga nilai pembayaran yang dilakukan oleh pelanggan.
+
+Setelah proses *join* antar tabel yang relevan — yaitu `payment`, `rental`, `inventory`, `film`, `film_category`, dan `category` — diperoleh dataset agregat berupa **`r nrow(df_kategori)` baris data**, di mana setiap baris merepresentasikan satu kategori film beserta total transaksi dan total pendapatannya.
+
+**Variabel yang dianalisis meliputi:**
+
+- **`kategori`**: Nama genre/kategori film (misalnya *Action*, *Comedy*, *Drama*, dll.).
+- **`total_rental`**: Total jumlah transaksi penyewaan yang terjadi untuk film-film dalam kategori tersebut. Nilai ini mencerminkan **popularitas** dan **permintaan pasar** terhadap suatu genre.
+- **`total_revenue`**: Total pendapatan kotor (dalam USD) yang dihasilkan dari seluruh pembayaran rental dalam satu kategori. Variabel ini merupakan **indikator kontribusi finansial** tiap genre terhadap bisnis.
+- **`rata_pembayaran`**: Rata-rata nilai pembayaran per transaksi dalam satu kategori. Nilai ini dapat menggambarkan **harga sewa rata-rata** film dalam kategori tersebut atau **pola spending** pelanggan per transaksi.
+
+Dari eksplorasi awal, total keseluruhan transaksi rental yang masuk dalam analisis ini adalah **`r format(sum(df_kategori$total_rental), big.mark=",")`**, dengan akumulasi pendapatan sebesar **`r dollar(round(sum(df_kategori$total_revenue),0))`**. Rata-rata pendapatan per kategori mencapai **`r dollar(round(mean(df_kategori$total_revenue),0))`**, dengan rentang antara **`r dollar(round(min(df_kategori$total_revenue),0))`** (terendah: *`r df_kategori$kategori[which.min(df_kategori$total_revenue)]`*) hingga **`r dollar(round(max(df_kategori$total_revenue),0))`** (tertinggi: *`r df_kategori$kategori[which.max(df_kategori$total_revenue)]`*).
+
+Perbedaan yang cukup signifikan antara nilai revenue tertinggi dan terendah mengindikasikan adanya **ketidakseimbangan distribusi** pendapatan antar kategori.Hal ini berati sebuah pola yang umum ditemukan pada bisnis hiburan berbasis konten, di mana genre-genre tertentu memiliki daya tarik yang jauh lebih besar dibandingkan genre lainnya.
+
+</div>
+
+## Preview Dataset — Revenue per Kategori
+
+```{r preview_kategori}
+DT::datatable(
+  df_kategori,
+  colnames  = c("Kategori", "Total Rental", "Total Revenue (USD)", "Rata-rata Pembayaran (USD)"),
+  options   = list(
+    pageLength = 16,
+    dom = 'Bfrtip',
+    buttons = c('csv', 'excel'),
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#8C031C', 'color': 'white'});",
+      "}"
+    )
+  ),
+  rownames  = FALSE,
+  caption   = htmltools::tags$caption(
+    style = 'caption-side: top; text-align: left; font-weight: bold; color: #8C031C;',
+    "Tabel 1. Revenue dan Rental per Kategori Film (Sakila)"
+  )
+) |>
+  DT::formatCurrency(columns = c("total_revenue", "rata_pembayaran"),
+                     currency = "$", digits = 2) |>
+  DT::formatRound(columns = "total_rental", digits = 0)
+```
+
+## Statistik Deskriptif
+
+```{r statistik_deskriptif}
+desc_stats <- df_kategori |>
+  summarise(
+    `Jumlah Kategori`           = n(),
+    `Total Rental Keseluruhan`  = format(sum(total_rental), big.mark=","),
+    `Total Revenue Keseluruhan` = dollar(sum(total_revenue)),
+    `Rata-rata Revenue/Kategori`= dollar(mean(total_revenue)),
+    `Revenue Tertinggi`         = dollar(max(total_revenue)),
+    `Revenue Terendah`          = dollar(min(total_revenue)),
+    `Std. Deviasi Revenue`      = dollar(sd(total_revenue)),
+    `Rata-rata Rata Pembayaran` = dollar(mean(rata_pembayaran))
+  )
+
+kable(t(desc_stats), col.names = c("Nilai"),
+      caption = "Tabel 2. Statistik Deskriptif Dataset") |>
+  kable_styling(bootstrap_options = c("striped","hover","bordered"),
+                full_width = FALSE, position = "left") |>
+  row_spec(0, background = "#8C031C", color = "white", bold = TRUE)
+```
+
+---
+
+# Visualisasi Data
+
+## Visualisasi 1 — Total Revenue per Kategori Film
+
+```{r plot_revenue_kategori}
+pal_crimson <- c("#8C031C","#A8042A","#C4183E","#F24B6A","#F26B6B",
+                 "#F27405","#F59340","#718C49","#9AB860","#B5CE90",
+                 "#D4E8B5","#F0F7DF","#FFF5EE","#FFE8D0","#FCD4C6","#F9B8BF")
+
+p1 <- ggplot(df_kategori,
+             aes(x    = reorder(kategori, total_revenue),
+                 y    = total_revenue,
+                 fill = reorder(kategori, total_revenue))) +
+  geom_col(show.legend = FALSE, width = 0.75) +
+  geom_text(aes(label = dollar(round(total_revenue, 0))),
+            hjust = -0.08, size = 3.2, color = "#2c2c2c", fontface = "bold") +
+  coord_flip() +
+  scale_y_continuous(labels = dollar_format(),
+                     expand = expansion(mult = c(0, 0.17))) +
+  scale_fill_manual(values = rev(pal_crimson)) +
+  labs(
+    title    = "Total Revenue per Kategori Film",
+    subtitle = "Database Sakila — Seluruh Periode Transaksi",
+    x        = NULL,
+    y        = "Total Revenue (USD)",
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#8C031C", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    axis.text.y   = element_text(size = 11, color = "#2c2c2c"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.background    = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background   = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p1, tooltip = c("x", "y"))
+```
+
+## Visualisasi 2 — Total Rental per Kategori Film
+
+```{r plot_rental_kategori}
+pal_olive <- c("#2E4A1A","#3D6025","#4E7830","#61923D","#718C49",
+               "#85A55C","#9AB870","#B0CC88","#C6DEA2","#DCF0BC",
+               "#F0F7DF","#F27405","#F59340","#F7B570","#F9CFA0","#FDE8CB")
+
+p2 <- ggplot(df_kategori,
+             aes(x    = reorder(kategori, total_rental),
+                 y    = total_rental,
+                 fill = reorder(kategori, total_rental))) +
+  geom_col(show.legend = FALSE, width = 0.75) +
+  geom_text(aes(label = comma(total_rental)),
+            hjust = -0.08, size = 3.2, color = "#2c2c2c", fontface = "bold") +
+  coord_flip() +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.17))) +
+  scale_fill_manual(values = rev(pal_olive)) +
+  labs(
+    title    = "Total Transaksi Rental per Kategori Film",
+    subtitle = "Database Sakila — Seluruh Periode Transaksi",
+    x        = NULL,
+    y        = "Jumlah Transaksi Rental",
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#718C49", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    axis.text.y   = element_text(size = 11, color = "#2c2c2c"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.background    = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background   = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p2, tooltip = c("x", "y"))
+```
+
+## Visualisasi 3 — Top 10 Film dengan Revenue Tertinggi
+
+```{r plot_top_film}
+pal_top <- c("#8C031C","#F24B6A","#F27405","#F26B6B","#718C49",
+             "#9AB860","#F59340","#C4183E","#61923D","#F9B8BF")
+
+p3 <- ggplot(df_top_film,
+             aes(x    = reorder(title, total_revenue),
+                 y    = total_revenue,
+                 fill = kategori)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = dollar(round(total_revenue, 0))),
+            hjust = -0.08, size = 3.2, fontface = "bold", color = "#2c2c2c") +
+  coord_flip() +
+  scale_y_continuous(labels = dollar_format(),
+                     expand = expansion(mult = c(0, 0.2))) +
+  scale_fill_manual(values = pal_top) +
+  labs(
+    title    = "Top 10 Film dengan Revenue Tertinggi",
+    subtitle = "Warna menunjukkan kategori film",
+    x        = NULL,
+    y        = "Total Revenue (USD)",
+    fill     = "Kategori",
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#F27405", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    axis.text.y   = element_text(size = 10.5, color = "#2c2c2c"),
+    legend.position = "bottom",
+    legend.title    = element_text(face = "bold"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.background    = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background   = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p3, tooltip = c("x", "y", "fill"))
+```
+
+## Visualisasi 4 — Proporsi Revenue per Kategori (Treemap / Lollipop)
+
+```{r plot_lollipop_pct}
+# Hitung persentase kontribusi revenue
+df_pct <- df_kategori |>
+  mutate(
+    pct_revenue = total_revenue / sum(total_revenue) * 100,
+    pct_label   = paste0(round(pct_revenue, 1), "%"),
+    kelompok    = ifelse(pct_revenue >= mean(pct_revenue), "Di Atas Rata-rata", "Di Bawah Rata-rata")
+  )
+
+p4 <- ggplot(df_pct,
+             aes(x     = reorder(kategori, pct_revenue),
+                 y     = pct_revenue,
+                 color = kelompok)) +
+  geom_segment(aes(xend = reorder(kategori, pct_revenue), yend = 0),
+               linewidth = 1.4, alpha = 0.7) +
+  geom_point(size = 5, alpha = 0.95) +
+  geom_text(aes(label = pct_label),
+            hjust = -0.35, size = 3.2, fontface = "bold") +
+  coord_flip() +
+  scale_color_manual(values = c("Di Atas Rata-rata" = "#8C031C",
+                                 "Di Bawah Rata-rata" = "#718C49")) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"),
+                     expand = expansion(mult = c(0, 0.2))) +
+  geom_hline(yintercept = mean(df_pct$pct_revenue),
+             linetype = "dashed", color = "#F27405", linewidth = 0.9) +
+  annotate("text", x = 1, y = mean(df_pct$pct_revenue) + 0.3,
+           label = "Rata-rata", color = "#F27405", size = 3.2, fontface = "italic") +
+  labs(
+    title    = "Kontribusi Revenue per Kategori Film (%)",
+    subtitle = "Garis oranye = rata-rata kontribusi antar kategori",
+    x        = NULL,
+    y        = "Persentase dari Total Revenue",
+    color    = NULL,
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#8C031C", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    axis.text.y   = element_text(size = 11),
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.background    = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background   = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p4, tooltip = c("x", "y", "color"))
+```
+
+## Visualisasi 5 — Rata-rata Pembayaran per Transaksi per Kategori
+
+```{r plot_avg_payment}
+p5 <- ggplot(df_kategori,
+             aes(x    = reorder(kategori, rata_pembayaran),
+                 y    = rata_pembayaran)) +
+  geom_col(aes(fill = rata_pembayaran), width = 0.72, show.legend = FALSE) +
+  geom_text(aes(label = dollar(round(rata_pembayaran, 2))),
+            hjust = -0.08, size = 3.2, fontface = "bold", color = "#2c2c2c") +
+  coord_flip() +
+  scale_y_continuous(labels = dollar_format(),
+                     expand = expansion(mult = c(0, 0.2))) +
+  scale_fill_gradient(low = "#F26B6B", high = "#8C031C") +
+  labs(
+    title    = "Rata-rata Pembayaran per Transaksi per Kategori",
+    subtitle = "Seberapa besar spending pelanggan per sewa film?",
+    x        = NULL,
+    y        = "Rata-rata Pembayaran (USD)",
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#F26B6B", size = 14),
+    plot.subtitle = element_text(color = "gray50", size = 11),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    axis.text.y   = element_text(size = 11),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.background    = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background   = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p5, tooltip = c("x", "y"))
+```
+
+---
+
+# Analisis Data
+
+## Analisis Korelasi Pearson
+
+Analisis korelasi Pearson digunakan untuk mengukur kekuatan dan arah hubungan linear antara **jumlah rental** ($x$) dan **total revenue** ($y$) per kategori film.
+
+### Rumus Korelasi Pearson
+
+$$
+r = \frac{\displaystyle\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}
+         {\sqrt{\displaystyle\sum_{i=1}^{n}(x_i - \bar{x})^2 \;\cdot\; \displaystyle\sum_{i=1}^{n}(y_i - \bar{y})^2}}
+$$
+
+di mana:
+
+- $x_i$ = total rental kategori ke-$i$
+- $y_i$ = total revenue kategori ke-$i$
+- $\bar{x}$ = rata-rata total rental
+- $\bar{y}$ = rata-rata total revenue
+- $r \in [-1,\; 1]$
+
+### Hipotesis
+
+$$H_0: \rho = 0 \quad \text{(tidak ada hubungan linear)}$$
+$$H_1: \rho \neq 0 \quad \text{(terdapat hubungan linear)}$$
+
+### Perhitungan Korelasi
+
+```{r korelasi}
+r_value   <- cor(df_kategori$total_rental, df_kategori$total_revenue,
+                 method = "pearson")
+cor_test  <- cor.test(df_kategori$total_rental, df_kategori$total_revenue,
+                      method = "pearson")
+
+cat("Koefisien Korelasi Pearson (r) :", round(r_value, 4), "\n")
+cat("p-value                        :", round(cor_test$p.value, 6), "\n")
+cat("95% Confidence Interval        : [",
+    round(cor_test$conf.int[1], 4), ",",
+    round(cor_test$conf.int[2], 4), "]\n")
+```
+
+### Scatter Plot — Hubungan Rental dan Revenue
+
+```{r scatter_plot}
+p6 <- ggplot(df_kategori,
+             aes(x     = total_rental,
+                 y     = total_revenue,
+                 label = kategori,
+                 color = total_revenue)) +
+  geom_point(size = 5, alpha = 0.90) +
+  geom_smooth(method = "lm", se = TRUE,
+              color  = "#F27405", linetype = "dashed", linewidth = 1,
+              fill   = "#F27405", alpha = 0.12) +
+  geom_text_repel(size = 3.4, max.overlaps = 20,
+                  color = "#2c2c2c", fontface = "bold",
+                  box.padding = 0.4) +
+  scale_color_gradient(low = "#F26B6B", high = "#8C031C") +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous(labels = dollar_format()) +
+  labs(
+    title    = "Hubungan Total Rental dan Total Revenue per Kategori",
+    subtitle = paste0("r = ", round(r_value, 4),
+                      "  |  p-value = ", round(cor_test$p.value, 6)),
+    x        = "Total Transaksi Rental",
+    y        = "Total Revenue (USD)",
+    color    = "Revenue",
+    caption  = "Sumber: Database Sakila (MySQL)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#8C031C", size = 14),
+    plot.subtitle = element_text(color = "#F27405", size = 11, face = "italic"),
+    plot.caption  = element_text(color = "gray60", size = 9),
+    legend.position = "right",
+    panel.grid.minor = element_blank(),
+    plot.background  = element_rect(fill = "#fdf6f0", color = NA),
+    panel.background = element_rect(fill = "#fdf6f0", color = NA)
+  )
+
+ggplotly(p6, tooltip = c("label", "x", "y"))
+```
+
+---
+
+# Interpretasi Hasil
+
+## Interpretasi Visualisasi
+
+<div class="interp-box">
+
+**Visualisasi 1 & 2 — Revenue dan Rental per Kategori:**
+
+Berdasarkan bar chart horizontal, terlihat bahwa distribusi revenue antar kategori film **tidak merata**. Terdapat beberapa kategori yang mendominasi baik dari sisi jumlah rental maupun total pendapatan, sementara sebagian kategori lainnya memberikan kontribusi yang relatif lebih kecil.
+
+Kategori dengan posisi teratas dalam grafik merupakan kategori yang paling diminati pelanggan sekaligus menjadi kontributor terbesar terhadap pendapatan bisnis rental. Hal ini mengindikasikan adanya **preferensi pelanggan yang terkonsentrasi** pada genre-genre tertentu.
+
+**Visualisasi 3 — Top 10 Film:**
+
+Film-film dengan revenue tertinggi berasal dari berbagai kategori, menunjukkan bahwa meskipun suatu kategori tidak berada di posisi teratas secara agregat, **film individual dalam kategori tersebut tetap bisa memiliki daya tarik tinggi**.
+
+**Visualisasi 4 — Lollipop Kontribusi Revenue (%):**
+
+Visualisasi ini memperlihatkan dengan jelas kategori mana yang memberikan kontribusi **di atas rata-rata** (titik merah tua) versus **di bawah rata-rata** (titik hijau olive). Garis oranye menandai batas rata-rata kontribusi per kategori. Kategori-kategori yang berada jauh di sebelah kanan garis ini adalah pilar utama pendapatan bisnis.
+
+**Visualisasi 5 — Rata-rata Pembayaran per Transaksi:**
+
+Rata-rata pembayaran per transaksi mencerminkan *spending behavior* pelanggan per rental. Kategori dengan rata-rata pembayaran tinggi mengindikasikan bahwa film-film dalam genre tersebut cenderung memiliki **harga sewa lebih tinggi** atau pelanggan lebih rela membayar mahal.
+
+**Visualisasi 6 — Scatter Plot Hubungan Rental & Revenue:**
+
+**Pola Searah (Positif)**: Garis putus-putus oranye menunjukkan tren positif yaitu semakin banyak jumlah transaksi rental, semakin besar total pendapatannya.
+
+**Area bayangan**: Area bayangan di sekitar garis menunjukkan "kisaran normal" pendapatan. Titik yang berada jauh di luar area ini memiliki performa unik dibanding tren rata-rata.
+
+</div>
+
+## Interpretasi Analisis Korelasi
+
+<div class="interp-box">
+
+Nilai koefisien korelasi Pearson $r$ yang diperoleh menunjukkan **kekuatan hubungan antara total rental dan total revenue** per kategori.
+
+Panduan interpretasi nilai $r$:
+
+| Rentang $|r|$ | Interpretasi                |
+|---------------|------------------------------|
+| 0.80 – 1.00   | Sangat kuat                 |
+| 0.60 – 0.79   | Kuat                        |
+| 0.40 – 0.59   | Sedang                      |
+| 0.20 – 0.39   | Lemah                       |
+| 0.00 – 0.19   | Sangat lemah / tidak linear |
+
+Apabila nilai $r$ mendekati **+1**, maka semakin banyak transaksi rental pada suatu kategori, semakin besar pula total pendapatan yang dihasilkan — hubungan **linear positif kuat**. Garis regresi pada scatter plot mempertegas arah dan kekuatan hubungan ini.
+
+Jika $p\text{-value} < 0.05$, maka $H_0$ **ditolak** — terdapat hubungan linear yang signifikan secara statistik antara jumlah rental dan revenue per kategori film.
+
+</div>
+
+---
+
+# Kesimpulan
+
+Berdasarkan seluruh hasil visualisasi dan analisis yang telah dilakukan, dapat disimpulkan:
+
+1. **Distribusi revenue tidak merata** antar kategori yang berati beberapa kategori mendominasi pendapatan total bisnis rental.
+2. **Terdapat korelasi positif** antara jumlah transaksi rental dan total revenue per kategori, yang berarti kategori dengan rental tinggi cenderung menghasilkan pendapatan lebih besar.
+3. **Top 10 film** dengan revenue tertinggi berasal dari berbagai kategori, menunjukkan adanya film-film "bintang" yang melampaui tren kategorinya.
+4. **Rata-rata pembayaran per transaksi** bervariasi antar kategori, mengindikasikan perbedaan strategi penetapan harga maupun preferensi spending pelanggan berdasarkan genre.
+5. Analisis ini dapat menjadi dasar **rekomendasi bisnis** seperti penambahan stok pada kategori populer, program promosi bertarget, dan pengelolaan portofolio film yang lebih efektif.
+
+```{r tutup_koneksi, include=FALSE}
+# Tutup koneksi database setelah selesai
+dbDisconnect(con)
+```
+
+---
+
+*Laporan ini dibuat menggunakan R Markdown dengan koneksi langsung ke Database Sakila (MySQL).*  
+*Dibuat oleh: Jihan Iffah Nisrina | `r Sys.Date()`*
